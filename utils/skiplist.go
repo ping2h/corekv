@@ -151,6 +151,7 @@ func (s *node) getNextOffset(h int) uint32 {
 	return atomic.LoadUint32(&s.tower[h])
 }
 
+// cas
 func (s *node) casNextOffset(h int, old, val uint32) bool {
 	return atomic.CompareAndSwapUint32(&s.tower[h], old, val)
 }
@@ -448,11 +449,15 @@ func (s *SkipListIterator) Valid() bool { return s.n != nil }
 // Key returns the key at the current position.
 func (s *SkipListIterator) Key() []byte {
 	//implement me here
+	return s.list.arena.getKey(s.n.keyOffset, s.n.keySize)
 }
 
 // Value returns value.
 func (s *SkipListIterator) Value() ValueStruct {
 	//implement me here
+	valOffset, valSize := s.n.getValueOffset()
+	return s.list.arena.getVal(valOffset, valSize)
+
 }
 
 // ValueUint64 returns the uint64 value of the current node.
@@ -475,16 +480,20 @@ func (s *SkipListIterator) Prev() {
 // 找到 >= target 的第一个节点
 func (s *SkipListIterator) Seek(target []byte) {
 	//implement me here
+	s.n, _ = s.list.findNear(target, false, true)
 }
 
 // 找到 <= target 的第一个节点
 func (s *SkipListIterator) SeekForPrev(target []byte) {
 	//implement me here
+	s.n, _ = s.list.findNear(target, true, true) // find <=.
 }
 
-//定位到链表的第一个节点
+// 定位到链表的第一个节点
 func (s *SkipListIterator) SeekToFirst() {
 	//implement me here
+	s.n = s.list.getNext(s.list.getHead(), 0)
+
 }
 
 // SeekToLast seeks position at the last entry in list.
@@ -502,6 +511,7 @@ type UniIterator struct {
 }
 
 // FastRand is a fast thread local random function.
+//
 //go:linkname FastRand runtime.fastrand
 func FastRand() uint32
 
